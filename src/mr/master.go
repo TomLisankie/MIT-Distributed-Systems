@@ -5,7 +5,8 @@ import "net"
 import "os"
 import "net/rpc"
 import "net/http"
-
+import "math/rand"
+import "fmt"
 
 type Master struct {
 	// Your definitions here.
@@ -24,6 +25,11 @@ func (m *Master) Example(args *ExampleArgs, reply *ExampleReply) error {
 	return nil
 }
 
+func (m *Master) AssignTask(args *TaskRequest, reply *MapTaskDescription) error {
+	reply.InputFileName = fmt.Sprintf("task%v.txt", rand.Intn(100))
+	reply.MapTaskNumber = rand.Intn(100)
+	return nil
+}
 
 //
 // start a thread that listens for RPCs from worker.go
@@ -45,10 +51,9 @@ func (m *Master) server() {
 // if the entire job has finished.
 //
 func (m *Master) Done() bool {
-	ret := false
+	ret := true
 
 	// Your code here.
-
 
 	return ret
 }
@@ -61,7 +66,6 @@ func MakeMaster(files []string, nReduce int) *Master {
 	m := Master{}
 
 	// Your code here.
-
 
 	m.server()
 	return &m

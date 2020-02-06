@@ -21,3 +21,11 @@ type ExampleReply struct {
 
 // Add your RPC definitions here.
 
+type TaskRequest struct {
+	Message string
+}
+
+type MapTaskDescription struct {
+	InputFileName string
+	MapTaskNumber int
+}

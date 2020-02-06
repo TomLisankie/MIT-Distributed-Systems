@@ -4,7 +4,7 @@ import "fmt"
 import "log"
 import "net/rpc"
 import "hash/fnv"
-
+import "time"
 
 //
 // Map functions return a slice of KeyValue.
@@ -24,7 +24,6 @@ func ihash(key string) int {
 	return int(h.Sum32() & 0x7fffffff)
 }
 
-
 //
 // main/mrworker.go calls this function.
 //
@@ -34,7 +33,23 @@ func Worker(mapf func(string, string) []KeyValue,
 	// Your worker implementation here.
 
 	// uncomment to send the Example RPC to the master.
-	// CallExample()
+	for i := 0; i < 10; i++ {
+		AskForTask() // ask for something to do
+		time.Sleep(1000 * time.Millisecond)
+	}
+
+}
+
+func AskForTask() {
+	args := TaskRequest{}
+
+	args.Message = "Hello"
+
+	reply := MapTaskDescription{}
+
+	call("Master.AssignTask", &args, &reply)
+
+	fmt.Printf("Input File Name: %v, Task Number: %v\n", reply.InputFileName, reply.MapTaskNumber)
 
 }
 
@@ -49,7 +64,7 @@ func CallExample() {
 	args := ExampleArgs{}
 
 	// fill in the argument(s).
-	args.X = 99
+	args.X = 16
 
 	// declare a reply structure.
 	reply := ExampleReply{}
