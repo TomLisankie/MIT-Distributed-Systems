@@ -10,7 +10,7 @@ import "fmt"
 
 type Master struct {
 	// Your definitions here.
-
+	// TODO: Declare Master data structures here
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -66,6 +66,8 @@ func MakeMaster(files []string, nReduce int) *Master {
 	m := Master{}
 
 	// Your code here.
+
+	// TODO: Probably put code for splitting input here
 
 	m.server()
 	return &m
