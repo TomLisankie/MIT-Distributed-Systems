@@ -1,0 +1,1 @@
+What happens if a client tries to contact a replica was told was primary only to find out the chunkserver holding the lease has crashed? Does it contact the master again or does it go straight to a different replica? Can it contact the master and ask if the master can reassign the lease to a different replica?

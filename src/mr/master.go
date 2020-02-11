@@ -8,9 +8,27 @@ import "net/http"
 import "math/rand"
 import "fmt"
 
+type Task struct {
+	// TODO: implement Task struct
+}
+
+type State []interface{}
+
 type Master struct {
 	// Your definitions here.
 	// TODO: Declare Master data structures here
+
+	// The master keeps several data structures. For each map
+	// task and reduce task, it stores the state (idle, in-progress,
+	// or completed), and the identity of the worker machine
+	// (for non-idle tasks).
+	// The master is the conduit through which the location
+	// of intermediate file regions is propagated from map tasks
+	// to reduce tasks. Therefore, for each completed map task,
+	// the master stores the locations and sizes of the R intermediate file regions produced by the map task.
+	// Updates to this location and size information are received as map
+	// tasks are completed. The information is pushed incrementally to workers that have in-progress reduce tasks.
+	Tasks map[Task]State
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -63,11 +81,20 @@ func (m *Master) Done() bool {
 // main/mrmaster.go calls this function.
 //
 func MakeMaster(files []string, nReduce int) *Master {
-	m := Master{}
+	m := Master{map[Task]State{}}
 
 	// Your code here.
 
-	// TODO: Probably put code for splitting input here
+	// splitting has already been taken care of, each pg file corresponds to one input file for a map task
+	// so there's gonna be a max of 8 Map tasks
+	// also, no wonder there only an nReduce parameter since # of map tasks is predetermined.
+
+	// Probably need to take care of loading tasks into the Master's task map
+	// We're already being handed the files in a string slice
+
+	for _, file := range files {
+		// TODO: put each file into the map
+	}
 
 	m.server()
 	return &m
