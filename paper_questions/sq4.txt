@@ -1,0 +1,1 @@
+What happens if a hypervisor crashes? Is there a copy of the hypervisor that it will failover to?
