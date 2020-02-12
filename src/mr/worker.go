@@ -45,7 +45,7 @@ func Worker(mapf func(string, string) []KeyValue,
 func AskForTask() {
 	args := TaskRequest{}
 
-	args.Message = "Hello"
+	args.Message = ""
 
 	reply := MapTaskDescription{}
 
@@ -61,6 +61,9 @@ func AskForTask() {
 // returns false if something goes wrong.
 //
 func call(rpcname string, args interface{}, reply interface{}) bool {
+
+	// When the job is completely finished, the worker processes should exit. A simple way to implement this is to use the return value from call(): if the worker fails to contact the master, it can assume that the master has exited because the job is done, and so the worker can terminate too. Depending on your design, you might also find it helpful to have a "please exit" pseudo-task that the master can give to workers.
+
 	// c, err := rpc.DialHTTP("tcp", "127.0.0.1"+":1234")
 	c, err := rpc.DialHTTP("unix", "mr-socket")
 	if err != nil {

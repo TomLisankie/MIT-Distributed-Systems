@@ -71,6 +71,8 @@ func (m *Master) server() {
 func (m *Master) Done() bool {
 	ret := true
 
+	// Should probably use WaitGroup or something here
+
 	// Your code here.
 
 	return ret
