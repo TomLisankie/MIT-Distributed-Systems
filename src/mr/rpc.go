@@ -26,7 +26,7 @@ type TaskRequest struct {
 }
 
 type MapTaskDescription struct {
-	InputFileName string
+	InputFileName Task
 	MapTaskNumber int
 }
 

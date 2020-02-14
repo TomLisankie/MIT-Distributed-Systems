@@ -6,13 +6,6 @@ import "os"
 import "net/rpc"
 import "net/http"
 import "math/rand"
-import "fmt"
-
-type Task struct {
-	// TODO: implement Task struct
-}
-
-type State []interface{}
 
 type Master struct {
 	// Your definitions here.
@@ -28,7 +21,8 @@ type Master struct {
 	// the master stores the locations and sizes of the R intermediate file regions produced by the map task.
 	// Updates to this location and size information are received as map
 	// tasks are completed. The information is pushed incrementally to workers that have in-progress reduce tasks.
-	Tasks map[Task]State
+	MapTasks    map[Task]State
+	ReduceTasks map[Task]State
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -38,13 +32,21 @@ type Master struct {
 //
 // the RPC argument and reply types are defined in rpc.go.
 //
-func (m *Master) Example(args *ExampleArgs, reply *ExampleReply) error {
-	reply.Y = args.X + 1
-	return nil
+
+func (m *Master) getAvailableMapTask() Task {
+	// TODO: Take into account when no Map tasks are available
+	for task, state := range m.MapTasks {
+		if state == idle {
+			m.MapTasks[task] = inProgress
+			return task
+		}
+	}
+
+	return Task{}
 }
 
 func (m *Master) AssignTask(args *TaskRequest, reply *MapTaskDescription) error {
-	reply.InputFileName = fmt.Sprintf("task%v.txt", rand.Intn(100))
+	reply.InputFileName = m.getAvailableMapTask()
 	reply.MapTaskNumber = rand.Intn(100)
 	return nil
 }
@@ -78,12 +80,25 @@ func (m *Master) Done() bool {
 	return ret
 }
 
+type Task struct {
+	// TODO: implement Task struct
+	FileName string
+}
+
+type State int
+
+const (
+	idle       = iota
+	inProgress = iota
+	completed  = iota
+)
+
 //
 // create a Master.
 // main/mrmaster.go calls this function.
 //
 func MakeMaster(files []string, nReduce int) *Master {
-	m := Master{map[Task]State{}}
+	m := Master{map[Task]State{}, map[Task]State{}}
 
 	// Your code here.
 
@@ -95,9 +110,8 @@ func MakeMaster(files []string, nReduce int) *Master {
 	// We're already being handed the files in a string slice
 
 	for _, file := range files {
-		// TODO: put each file into the map
+		m.MapTasks[Task{file}] = idle
 	}
-
 	m.server()
 	return &m
 }
