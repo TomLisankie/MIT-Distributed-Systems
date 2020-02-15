@@ -6,6 +6,7 @@ import "os"
 import "net/rpc"
 import "net/http"
 import "math/rand"
+import "fmt"
 
 type Master struct {
 	// Your definitions here.
@@ -108,10 +109,10 @@ func MakeMaster(files []string, nReduce int) *Master {
 
 	// Probably need to take care of loading tasks into the Master's task map
 	// We're already being handed the files in a string slice
-
 	for _, file := range files {
 		m.MapTasks[Task{file}] = idle
 	}
+	fmt.Println(m.MapTasks)
 	m.server()
 	return &m
 }
