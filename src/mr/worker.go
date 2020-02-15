@@ -4,7 +4,7 @@ import "fmt"
 import "log"
 import "net/rpc"
 import "hash/fnv"
-import "time"
+import "io/ioutil"
 
 //
 // Map functions return a slice of KeyValue.
@@ -34,25 +34,42 @@ func Worker(mapf func(string, string) []KeyValue,
 	/* TODO: Instead of storing a slice of intermediate values, store intermediate
 	values in *nReduce* buckets in the current directory. Declaration probably doesn't go here */
 	// uncomment to send the Example RPC to the master.
-	for i := 0; i < 10; i++ {
-		AskForTask() // ask for something to do
-		time.Sleep(1000 * time.Millisecond)
+	reply := AskForTask()
+
+	// read in contents of file
+
+	data, _ := ioutil.ReadFile(reply.InputFileName.FileName)
+	if reply.TaskType == mapTask {
+		keyVals := mapf(reply.InputFileName.FileName, string(data))
+		fmt.Println(keyVals)
+		// Now, write keyVals into an intermediate bucket
+		// Then tell the master that we're done
+	} else if reply.TaskType == reduceTask {
+
+	} else {
+
 	}
+
+}
+
+func runMap(reply TaskDescription) {
 
 }
 
 // Makes an RPC call to the master asking for a task.
 
-func AskForTask() {
+func AskForTask() TaskDescription {
 	args := TaskRequest{}
 
 	args.Message = ""
 
-	reply := MapTaskDescription{}
+	reply := TaskDescription{}
 
 	call("Master.AssignTask", &args, &reply)
 
-	fmt.Printf("Input File Name: %v, Task Number: %v\n", reply.InputFileName, reply.MapTaskNumber)
+	// fmt.Printf("Input File Name: %v, Task Number: %v\n", reply.InputFileName, reply.MapTaskNumber)
+
+	return reply
 
 }
 

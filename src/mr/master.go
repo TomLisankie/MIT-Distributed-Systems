@@ -34,11 +34,11 @@ type Master struct {
 // the RPC argument and reply types are defined in rpc.go.
 //
 
-func (m *Master) getAvailableMapTask() Task {
+func (m *Master) getAvailableTask() Task {
 	// TODO: Take into account when no Map tasks are available
 	for task, state := range m.MapTasks {
-		if state == idle {
-			m.MapTasks[task] = inProgress
+		if state.ProcessingState == idle {
+			m.MapTasks[task] = State{inProgress, 0}
 			return task
 		}
 	}
@@ -46,9 +46,16 @@ func (m *Master) getAvailableMapTask() Task {
 	return Task{}
 }
 
-func (m *Master) AssignTask(args *TaskRequest, reply *MapTaskDescription) error {
-	reply.InputFileName = m.getAvailableMapTask()
-	reply.MapTaskNumber = rand.Intn(100)
+const (
+	mapTask       = iota
+	reduceTask    = iota
+	terminateTask = iota
+)
+
+func (m *Master) AssignTask(args *TaskRequest, reply *TaskDescription) error {
+	reply.TaskType = mapTask
+	reply.InputFileName = m.getAvailableTask()
+	reply.TaskNumber = rand.Intn(100)
 	return nil
 }
 
@@ -86,7 +93,10 @@ type Task struct {
 	FileName string
 }
 
-type State int
+type State struct {
+	ProcessingState int
+	WorkerID        int // TODO: Figure out how to get an ID for each worker.
+}
 
 const (
 	idle       = iota
@@ -110,7 +120,7 @@ func MakeMaster(files []string, nReduce int) *Master {
 	// Probably need to take care of loading tasks into the Master's task map
 	// We're already being handed the files in a string slice
 	for _, file := range files {
-		m.MapTasks[Task{file}] = idle
+		m.MapTasks[Task{file}] = State{idle, 0}
 	}
 	fmt.Println(m.MapTasks)
 	m.server()
