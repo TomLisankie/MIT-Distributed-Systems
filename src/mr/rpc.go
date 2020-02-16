@@ -29,6 +29,7 @@ type TaskDescription struct {
 	TaskType      int
 	InputFileName Task
 	TaskNumber    int
+	NReduce       int
 }
 
 type ReduceTaskDescription struct {

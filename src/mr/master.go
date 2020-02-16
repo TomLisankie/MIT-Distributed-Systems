@@ -24,6 +24,7 @@ type Master struct {
 	// tasks are completed. The information is pushed incrementally to workers that have in-progress reduce tasks.
 	MapTasks    map[Task]State
 	ReduceTasks map[Task]State
+	nReduce     int
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -56,6 +57,7 @@ func (m *Master) AssignTask(args *TaskRequest, reply *TaskDescription) error {
 	reply.TaskType = mapTask
 	reply.InputFileName = m.getAvailableTask()
 	reply.TaskNumber = rand.Intn(100)
+	reply.NReduce = m.nReduce
 	return nil
 }
 
@@ -109,13 +111,13 @@ const (
 // main/mrmaster.go calls this function.
 //
 func MakeMaster(files []string, nReduce int) *Master {
-	m := Master{map[Task]State{}, map[Task]State{}}
+	m := Master{map[Task]State{}, map[Task]State{}, nReduce}
 
 	// Your code here.
 
 	// splitting has already been taken care of, each pg file corresponds to one input file for a map task
 	// so there's gonna be a max of 8 Map tasks
-	// also, no wonder there only an nReduce parameter since # of map tasks is predetermined.
+	// also, no wonder there's only an nReduce parameter since # of map tasks is predetermined.
 
 	// Probably need to take care of loading tasks into the Master's task map
 	// We're already being handed the files in a string slice
