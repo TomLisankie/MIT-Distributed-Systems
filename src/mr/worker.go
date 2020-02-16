@@ -38,52 +38,54 @@ func Worker(mapf func(string, string) []KeyValue,
 	reply := AskForTask()
 
 	// read in contents of file
+	for reply.TaskType != terminateTask {
+		data, _ := ioutil.ReadFile(reply.FileName)
+		if reply.TaskType == mapTask {
+			keyVals := mapf(reply.FileName, string(data))
+			fmt.Println(keyVals)
+			// Now, write keyVals into an intermediate bucket
+			for i, kv := range keyVals {
+				bucketNum := ihash(kv.Key) % reply.NReduce
+				intermediateFileName := fmt.Sprintf("mr-%v-%v", reply.TaskNumber, bucketNum)
+				if i == 0 {
+					// Check to see if the file exists. If so, delete it
+					if _, err := os.Stat("./" + intermediateFileName); err == nil {
+						os.Remove("./" + intermediateFileName)
+					}
 
-	data, _ := ioutil.ReadFile(reply.InputFileName.FileName)
-	if reply.TaskType == mapTask {
-		keyVals := mapf(reply.InputFileName.FileName, string(data))
-		fmt.Println(keyVals)
-		// Now, write keyVals into an intermediate bucket
-		for i, kv := range keyVals {
-			bucketNum := ihash(kv.Key) % reply.NReduce
-			intermediateFileName := fmt.Sprintf("mr-%v-%v", reply.TaskNumber, bucketNum)
-			if i == 0 {
-				// Check to see if the file exists. If so, delete it
-				if _, err := os.Stat("./" + intermediateFileName); err == nil {
-					os.Remove("./" + intermediateFileName)
 				}
+				file, err := os.OpenFile("./"+intermediateFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					// fmt.Println("There was a problem opening the file!")
+				}
+				defer file.Close()
+				file.WriteString(fmt.Sprintf("%v %v\n", kv.Key, kv.Value))
 
 			}
-			file, err := os.OpenFile("./"+intermediateFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				// fmt.Println("There was a problem opening the file!")
-			}
-			defer file.Close()
-			file.WriteString(fmt.Sprintf("%v %v\n", kv.Key, kv.Value))
+			// Then tell the master that we're done
+			DoneWithTask(reply)
+		} else if reply.TaskType == reduceTask {
+
+		} else {
 
 		}
-		// Then tell the master that we're done
-		// DoneWithTask(reply)
-	} else if reply.TaskType == reduceTask {
-
-	} else {
-
+		reply := AskForTask()
 	}
 
 }
 
-func runMap(reply TaskDescription) {
-
+func DoneWithTask(doneTask *Task) {
+	call("Master.MarkTaskComplete", &doneTask)
 }
 
 // Makes an RPC call to the master asking for a task.
 
-func AskForTask() TaskDescription {
+func AskForTask() Task {
 	args := TaskRequest{}
 
 	args.Message = ""
 
-	reply := TaskDescription{}
+	reply := Task{}
 
 	call("Master.AssignTask", &args, &reply)
 

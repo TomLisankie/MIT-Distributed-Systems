@@ -22,9 +22,8 @@ type Master struct {
 	// the master stores the locations and sizes of the R intermediate file regions produced by the map task.
 	// Updates to this location and size information are received as map
 	// tasks are completed. The information is pushed incrementally to workers that have in-progress reduce tasks.
-	MapTasks    map[Task]State
-	ReduceTasks map[Task]State
-	nReduce     int
+	TaskStates map[Task]State
+	nReduce    int
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -37,14 +36,27 @@ type Master struct {
 
 func (m *Master) getAvailableTask() Task {
 	// TODO: Take into account when no Map tasks are available
-	for task, state := range m.MapTasks {
-		if state.ProcessingState == idle {
-			m.MapTasks[task] = State{inProgress, 0}
-			return task
+	if tasksAvailable() {
+		for task, state := range m.TaskStates {
+			if state.ProcessingState == idle {
+				m.TaskStates[task] = State{inProgress, 0}
+				return task
+			}
 		}
+	} else {
+
 	}
 
-	return Task{}
+	return Task{terminateTask, ""}
+}
+
+func tasksAvailable() {
+	for task, state := range m.TaskStates {
+		if state.ProcessingState == idle {
+			return true
+		}
+	}
+	return false
 }
 
 const (
@@ -53,11 +65,16 @@ const (
 	terminateTask = iota
 )
 
-func (m *Master) AssignTask(args *TaskRequest, reply *TaskDescription) error {
-	reply.TaskType = mapTask
-	reply.InputFileName = m.getAvailableTask()
-	reply.TaskNumber = rand.Intn(100)
-	reply.NReduce = m.nReduce
+func (m *Master) AssignTask(args *TaskRequest, reply *Task) error {
+	reply = m.getAvailableTask()
+	return nil
+}
+
+func (m *Master) MarkTaskComplete(args *CompletionPayload) error {
+	m.TaskStates[args] = State{completed, 0}
+	if args.task.TaskType == mapTask {
+		m.TaskStates[Task{reduceTask, args.intermediateFile, 0, args.task.NReduce}] = State{idle, 0}
+	}
 	return nil
 }
 
@@ -92,7 +109,10 @@ func (m *Master) Done() bool {
 
 type Task struct {
 	// TODO: implement Task struct
-	FileName string
+	TaskType   int
+	FileName   string
+	TaskNumber int
+	NReduce    int
 }
 
 type State struct {
@@ -122,9 +142,9 @@ func MakeMaster(files []string, nReduce int) *Master {
 	// Probably need to take care of loading tasks into the Master's task map
 	// We're already being handed the files in a string slice
 	for _, file := range files {
-		m.MapTasks[Task{file}] = State{idle, 0}
+		m.TaskStates[Task{mapTask, file, 0, nReduce}] = State{idle, 0}
 	}
-	fmt.Println(m.MapTasks)
+	fmt.Println(m.TaskStates)
 	m.server()
 	return &m
 }

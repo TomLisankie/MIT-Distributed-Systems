@@ -11,29 +11,15 @@ package mr
 // and reply for an RPC.
 //
 
-type ExampleArgs struct {
-	X int
-}
-
-type ExampleReply struct {
-	Y int
-}
-
 // Add your RPC definitions here.
 
 type TaskRequest struct {
 	Message string
 }
 
-type TaskDescription struct {
-	TaskType      int
-	InputFileName Task
-	TaskNumber    int
-	NReduce       int
-}
-
-type ReduceTaskDescription struct {
-	ReduceTaskNumber int
+type CompletionPayload struct {
+	DoneTask         Task
+	IntermediateFile string
 }
 
 // 1. The MapReduce library in the user program first splits the input files into M pieces of typically 16 megabytes to 64 megabytes (MB) per piece (controllable by the user via an optional parameter). It then starts up many copies of the program on a cluster of machines.
