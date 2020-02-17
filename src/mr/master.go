@@ -5,7 +5,9 @@ import "net"
 import "os"
 import "net/rpc"
 import "net/http"
-import "math/rand"
+import "sync"
+
+// import "math/rand"
 import "fmt"
 
 type Master struct {
@@ -22,8 +24,9 @@ type Master struct {
 	// the master stores the locations and sizes of the R intermediate file regions produced by the map task.
 	// Updates to this location and size information are received as map
 	// tasks are completed. The information is pushed incrementally to workers that have in-progress reduce tasks.
-	TaskStates map[Task]State
-	nReduce    int
+	MapTasks    map[Task]State
+	ReduceTasks map[Task]State
+	nReduce     int
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -34,29 +37,25 @@ type Master struct {
 // the RPC argument and reply types are defined in rpc.go.
 //
 
-func (m *Master) getAvailableTask() Task {
-	// TODO: Take into account when no Map tasks are available
-	if tasksAvailable() {
-		for task, state := range m.TaskStates {
-			if state.ProcessingState == idle {
-				m.TaskStates[task] = State{inProgress, 0}
-				return task
-			}
-		}
-	} else {
-
-	}
-
-	return Task{terminateTask, ""}
-}
-
-func tasksAvailable() {
-	for task, state := range m.TaskStates {
+func (m *Master) getAvailableTask() *Task {
+	// put a lock here
+	lock := &sync.Mutex{}
+	lock.Lock()
+	for task, state := range m.MapTasks {
 		if state.ProcessingState == idle {
-			return true
+			fmt.Println(task.FileName)
+			m.MapTasks[task] = State{inProgress, 0}
+			return &task
 		}
 	}
-	return false
+	lock.Unlock()
+
+	for task, state := range m.ReduceTasks {
+		fmt.Println(task, state)
+		// TODO: Stuff to do to find a reduce task to return
+	}
+
+	return &Task{terminateTask, "terminateTask", 0, m.nReduce}
 }
 
 const (
@@ -70,11 +69,15 @@ func (m *Master) AssignTask(args *TaskRequest, reply *Task) error {
 	return nil
 }
 
-func (m *Master) MarkTaskComplete(args *CompletionPayload) error {
-	m.TaskStates[args] = State{completed, 0}
-	if args.task.TaskType == mapTask {
-		m.TaskStates[Task{reduceTask, args.intermediateFile, 0, args.task.NReduce}] = State{idle, 0}
-	}
+func (m *Master) MarkTaskComplete(args *Task) error {
+	// m.TaskStates[args] = State{completed, 0}
+	// if args.TaskType == mapTask {
+	// 	m.TaskStates[Task{reduceTask, args.IntermediateFile, 0, args.task.NReduce}] = State{idle, 0}
+	// } else if args.task.TaskType == reduceTask {
+
+	// } else {
+
+	// }
 	return nil
 }
 
@@ -108,7 +111,6 @@ func (m *Master) Done() bool {
 }
 
 type Task struct {
-	// TODO: implement Task struct
 	TaskType   int
 	FileName   string
 	TaskNumber int
@@ -142,9 +144,9 @@ func MakeMaster(files []string, nReduce int) *Master {
 	// Probably need to take care of loading tasks into the Master's task map
 	// We're already being handed the files in a string slice
 	for _, file := range files {
-		m.TaskStates[Task{mapTask, file, 0, nReduce}] = State{idle, 0}
+		m.MapTasks[Task{mapTask, file, 0, nReduce}] = State{idle, 0}
 	}
-	fmt.Println(m.TaskStates)
+	fmt.Println(m.MapTasks)
 	m.server()
 	return &m
 }

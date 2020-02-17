@@ -6,6 +6,7 @@ import "net/rpc"
 import "hash/fnv"
 import "io/ioutil"
 import "os"
+import "encoding/json"
 
 //
 // Map functions return a slice of KeyValue.
@@ -38,44 +39,46 @@ func Worker(mapf func(string, string) []KeyValue,
 	reply := AskForTask()
 
 	// read in contents of file
-	for reply.TaskType != terminateTask {
+	for i := 0; i < 3; i++ { // reply.TaskType != terminateTask
+		fmt.Println(reply.FileName)
 		data, _ := ioutil.ReadFile(reply.FileName)
 		if reply.TaskType == mapTask {
+			intermediateNameTemplate := fmt.Sprintf("mr-%v-", reply.TaskNumber)
 			keyVals := mapf(reply.FileName, string(data))
-			fmt.Println(keyVals)
+			fmt.Println(fmt.Sprintf("keyVals: %v", keyVals))
 			// Now, write keyVals into an intermediate bucket
-			for i, kv := range keyVals {
+			for _, kv := range keyVals {
 				bucketNum := ihash(kv.Key) % reply.NReduce
-				intermediateFileName := fmt.Sprintf("mr-%v-%v", reply.TaskNumber, bucketNum)
-				if i == 0 {
-					// Check to see if the file exists. If so, delete it
-					if _, err := os.Stat("./" + intermediateFileName); err == nil {
-						os.Remove("./" + intermediateFileName)
-					}
+				intermediateFileName := intermediateNameTemplate + string(bucketNum)
 
-				}
 				file, err := os.OpenFile("./"+intermediateFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 				if err != nil {
-					// fmt.Println("There was a problem opening the file!")
+					fmt.Println("There was a problem opening the file!")
 				}
 				defer file.Close()
-				file.WriteString(fmt.Sprintf("%v %v\n", kv.Key, kv.Value))
+				// file.WriteString(fmt.Sprintf("%v %v\n", kv.Key, kv.Value))
+				encoder := json.NewEncoder(file)
+				err = encoder.Encode(&kv)
+				if err != nil {
+					fmt.Println("There was an error.")
+				}
 
 			}
 			// Then tell the master that we're done
-			DoneWithTask(reply)
+			// DoneWithTask(reply)
 		} else if reply.TaskType == reduceTask {
 
 		} else {
 
 		}
-		reply := AskForTask()
+		reply = AskForTask()
 	}
 
 }
 
 func DoneWithTask(doneTask *Task) {
-	call("Master.MarkTaskComplete", &doneTask)
+	// payload := CompletionPayload{doneTask}
+	// call("Master.MarkTaskComplete", &doneTask)
 }
 
 // Makes an RPC call to the master asking for a task.
