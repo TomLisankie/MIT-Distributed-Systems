@@ -44,16 +44,9 @@ func Worker(mapf func(string, string) []KeyValue,
 		keyVals := mapf(reply.InputFileName.FileName, string(data))
 		fmt.Println(keyVals)
 		// Now, write keyVals into an intermediate bucket
-		for i, kv := range keyVals {
+		for _, kv := range keyVals {
 			bucketNum := ihash(kv.Key) % reply.NReduce
 			intermediateFileName := fmt.Sprintf("mr-%v-%v", reply.TaskNumber, bucketNum)
-			if i == 0 {
-				// Check to see if the file exists. If so, delete it
-				if _, err := os.Stat("./" + intermediateFileName); err == nil {
-					os.Remove("./" + intermediateFileName)
-				}
-
-			}
 			file, err := os.OpenFile("./"+intermediateFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				// fmt.Println("There was a problem opening the file!")
