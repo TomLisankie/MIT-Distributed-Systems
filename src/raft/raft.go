@@ -57,7 +57,6 @@ type Raft struct {
 	me        int                 // this peer's index into peers[]
 	dead      int32               // set by Kill()
 
-	id          *labrpc.ClientEnd
 	currentTerm int
 	voteCount   int
 	votedFor    int
@@ -148,10 +147,6 @@ type RequestVoteReply struct {
 // Test 1
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
-	max := 300
-	min := 150
-	electionTimeout := (rand.Intn(max-min) + min) * int(time.Millisecond)
-	fmt.Println(electionTimeout)
 
 }
 
@@ -187,6 +182,23 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
 	return ok
+}
+
+func (rf *Raft) timeElection(args *RequestVoteArgs, reply *RequestVoteReply) {
+	max := 300
+	min := 150
+	electionTimeout := time.Duration(rand.Intn(max-min)+min) * time.Millisecond
+	fmt.Println(electionTimeout)
+	time.Sleep(electionTimeout)
+	fmt.Println(fmt.Sprintf("Done sleeping: %v", electionTimeout))
+	rf.currentTerm += 1
+	args.Term = rf.currentTerm
+	rf.votedFor = rf.me
+	for i, _ := range rf.peers {
+		if i != rf.me {
+			rf.sendRequestVote(i, args, &RequestVoteReply{})
+		}
+	}
 }
 
 //
@@ -253,12 +265,15 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	// Your initialization code here (2A, 2B, 2C).
 	rf.currentTerm = 0
-	rf.id = rf.peers[me]
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
 
-	go rf.RequestVote(RequestVoteArgs{rf.currentTerm, rf.id, 0, 0}, RequestVoteReply{})
+	var args *RequestVoteArgs
+	var reply *RequestVoteReply
+	args = &RequestVoteArgs{rf.currentTerm, rf.me, 0, 0}
+	reply = &RequestVoteReply{}
+	go rf.timeElection(args, reply)
 
 	return rf
 }
