@@ -1,0 +1,19 @@
+This works in terms of happens before because nothing will be taken from the channel until there is something in the channel. This only happens after `setup` returns.
+
+
+var a string
+var ch chan string
+
+func setup() {
+	a = "hello, world"
+	ch <- a
+}
+
+func main() {
+	ch = make(chan string, 1)
+	go setup()
+	str := <-ch
+	print(str)
+	close(ch)
+}
+
