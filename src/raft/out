@@ -1,0 +1,21 @@
+Test (2A): initial election ...
+276ms
+275ms
+218ms
+Done sleeping: 218ms
+Done sleeping: 275ms
+Done sleeping: 276ms
+--- FAIL: TestInitialElection2A (4.99s)
+	config.go:330: expected one leader, got none
+241ms
+236ms
+Test (2A): election after network failure ...
+205ms
+Done sleeping: 205ms
+Done sleeping: 236ms
+Done sleeping: 241ms
+--- FAIL: TestReElection2A (5.00s)
+	config.go:330: expected one leader, got none
+FAIL
+exit status 1
+FAIL	_/home/thomas/d/MIT-Distributed-Systems/src/raft	9.999s

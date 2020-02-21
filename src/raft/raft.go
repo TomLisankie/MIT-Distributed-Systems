@@ -152,6 +152,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	if args.Term > rf.currentTerm {
 		rf.turnOffElectionTimeout <- true
 		rf.currentTerm = args.Term
+		rf.votedFor = args.CandidateID
 		reply.VoteGranted = true
 		reply.Term = rf.currentTerm
 	}
@@ -218,6 +219,7 @@ func (rf *Raft) timeElection(args *RequestVoteArgs) {
 	}
 
 	for _, reply := range replies {
+		// TODO: If a node recognizes node as leader, the recognizing node should be added to a list of followers
 		fmt.Println(reply)
 	}
 }
