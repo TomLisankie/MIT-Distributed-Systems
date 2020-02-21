@@ -61,6 +61,8 @@ type Raft struct {
 	voteCount   int
 	votedFor    int
 	log         []LogEntry
+
+	turnOffElectionTimeout chan bool
 	// Test 1
 	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
@@ -127,7 +129,7 @@ func (rf *Raft) readPersist(data []byte) {
 type RequestVoteArgs struct {
 	// Your data here (2A, 2B).
 	Term         int
-	CandidateID  int // might not be an int, although it's probably just the port
+	CandidateID  int
 	LastLogIndex int
 	LastLogTerm  int
 }
@@ -147,7 +149,12 @@ type RequestVoteReply struct {
 // Test 1
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
-
+	if args.Term > rf.currentTerm {
+		rf.turnOffElectionTimeout <- true
+		rf.currentTerm = args.Term
+		reply.VoteGranted = true
+		reply.Term = rf.currentTerm
+	}
 }
 
 //
@@ -184,20 +191,34 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	return ok
 }
 
-func (rf *Raft) timeElection(args *RequestVoteArgs, reply *RequestVoteReply) {
+func (rf *Raft) timeElection(args *RequestVoteArgs) {
 	max := 300
 	min := 150
 	electionTimeout := time.Duration(rand.Intn(max-min)+min) * time.Millisecond
 	fmt.Println(electionTimeout)
 	time.Sleep(electionTimeout)
 	fmt.Println(fmt.Sprintf("Done sleeping: %v", electionTimeout))
+	select { // maybe just use a separate goroutine to do all this
+	case <-rf.turnOffElectionTimeout:
+		fmt.Println("turning off election")
+		return
+	}
 	rf.currentTerm += 1
 	args.Term = rf.currentTerm
 	rf.votedFor = rf.me
+
+	replies := []*RequestVoteReply{}
 	for i, _ := range rf.peers {
+		fmt.Println(i)
 		if i != rf.me {
-			rf.sendRequestVote(i, args, &RequestVoteReply{})
+			reply := &RequestVoteReply{}
+			rf.sendRequestVote(i, args, reply)
+			replies = append(replies, reply)
 		}
+	}
+
+	for _, reply := range replies {
+		fmt.Println(reply)
 	}
 }
 
@@ -265,15 +286,14 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	// Your initialization code here (2A, 2B, 2C).
 	rf.currentTerm = 0
+	rf.turnOffElectionTimeout = make(chan bool)
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
 
 	var args *RequestVoteArgs
-	var reply *RequestVoteReply
 	args = &RequestVoteArgs{rf.currentTerm, rf.me, 0, 0}
-	reply = &RequestVoteReply{}
-	go rf.timeElection(args, reply)
+	go rf.timeElection(args)
 
 	return rf
 }
